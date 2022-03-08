@@ -1,9 +1,17 @@
 # Autograder
 .autograder
+__pycache__
+output.json
+grading/__pycache__
+grading/part1.c
+grading/part2.c
+grading/utils.c
 
 # Project files
 riscv
 riscvcode/out
+grading/riscv
+grading/riscvcode/out
 
 # Prerequisites
 *.d
