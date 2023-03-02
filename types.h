@@ -25,7 +25,6 @@ typedef Word Register; /* unsigned 32-bit*/
 
 /* The processor data:
   32 registers
-  LO & HI special registers
   PC program counter */
 typedef struct {
   Register R[32];
@@ -79,11 +78,12 @@ typedef union {
     unsigned int imm : 20;
   } utype;
 
+  /* and so on... */
   struct {
     unsigned int opcode : 7;
     unsigned int rd : 5;
     unsigned int imm : 20;
-  } ujtype;
+  } jtype;
 
   struct {
     unsigned int opcode : 7;
@@ -94,15 +94,14 @@ typedef union {
     unsigned int imm7 : 7;
   } stype;
 
-   struct {
+  struct {
     unsigned int opcode : 7;
     unsigned int imm5: 5;
     unsigned int funct3: 3;
     unsigned int rs1 : 5;
     unsigned int rs2 : 5;
     unsigned int imm7 : 7;
-  } sbtype;
-
+  } btype;
 
   /* basically ignore this stuff*/
   int16_t chunks16[2];

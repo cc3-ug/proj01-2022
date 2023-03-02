@@ -5,27 +5,29 @@
 
 //sign extends a bitfield with given size
 /* You may find implementing this function helpful */
-int bitSigner(unsigned int field, unsigned int size) {
+int bitExtender(unsigned int field, unsigned int size) {
   /* YOUR CODE HERE */
   return 0;
 }
 
 
-/* Remember that the offsets should return the offset in BYTES */
+/* Distances in BYTES */
 
-int get_branch_offset(Instruction instruction) {
+int get_branch_distance(Instruction instruction) {
   /* YOUR CODE HERE */
   return 0;
 }
 
 
-int get_jump_offset(Instruction instruction) {
+int get_jump_distance(Instruction instruction) {
   /* YOUR CODE HERE */
   return 0;
 }
 
+/* Offset in BYTES */
+/* Used both in load and store */
 
-int get_store_offset(Instruction instruction) {
+int get_memory_offset(Instruction instruction) {
   /* YOUR CODE HERE */
   return 0;
 }
