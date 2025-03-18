@@ -33,5 +33,8 @@ part2: riscv $(addsuffix _execute, $(ASM_TESTS))
 	@diff $(word 2, $^) riscvcode/out/test.trace && echo "$@ TEST PASSED!" || echo "$@ TEST FAILED!"
 
 clean:
+	rm -rf grading/__pycache__
 	rm -f riscv
 	rm -rf riscvcode/out
+	rm output.json
+

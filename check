@@ -1,7 +1,3 @@
-cp part1.c grading/
-cp part2.c grading/
-cp utils.c grading/
-
 {
   title() {
     printf "   ___       __                        __       \n"
@@ -11,7 +7,7 @@ cp utils.c grading/
     printf "                   /___/\n\n"
     printf "             Machine Structures\n"
     printf "     Great Ideas in Computer Architecture\n"
-    printf "    Proyecto 1: Des-ensamblador y simulador\n\n\n"
+    printf "    Proyecto 2: Des-ensamblador y simulador\n\n\n"
   }
 
   title
