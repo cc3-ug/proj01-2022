@@ -1,48 +1,18 @@
 import os
 import re
 import json
-import boto3
 import base64
 import shutil
 import hashlib
 import zipfile
-import paramiko
 import tempfile
 import pycparser
 from os import environ
 from glob import glob
-from Crypto import Random
 from subprocess import run
 from subprocess import PIPE
 from tabulate import tabulate
-from Crypto.Cipher import AES
 from distutils.dir_util import copy_tree
-
-
-# encrypt a string
-def encrypt(raw):
-    def pad(s):
-        return s + (16 - len(s) % 16) * chr(16 - len(s) % 16)
-    rawkey = environ['AUTOGRADERS_KEY']
-    key = hashlib.sha256(rawkey.encode()).digest()
-    raw = pad(raw)
-    iv = Random.new().read(AES.block_size)
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    return base64.b64encode(iv + cipher.encrypt(raw)).decode()
-
-
-# decrypt an encrypted string
-def decrypt(enc):
-    def unpad(s):
-        if (type(s[-1]) == int):
-            return s[0: -s[-1]]
-        return s[0: -ord(s[-1])]
-    enc = base64.b64decode(enc)
-    iv = enc[:16]
-    rawkey = environ['AUTOGRADERS_KEY']
-    key = hashlib.sha256(rawkey.encode()).digest()
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    return unpad(cipher.decrypt(enc[16:])).decode()
 
 
 # reads a file
@@ -154,66 +124,18 @@ def expected_files(files, dir='.'):
 def execute(cmd=[], shell=False, dir='.', input=None, encoding='ascii', timeout=5):
     return run(cmd, shell=shell, stdout=PIPE, stderr=PIPE, input=input, cwd=dir, timeout=timeout)
 
-
 # makes a target
 def make(target=''):
     return execute(cmd=['make', target])
 
 
-# parses a form
-def parse_form(f):
-    f = open(f, 'r', encoding='latin1')
-    p = re.compile(r'^[0-9]+( )*:[a-zA-Z0-9, ]+$')
-    lookup = {}
-    for line in f:
-        line = line.strip()
-        if p.search(line) is not None:
-            vals = line.split(':')
-            lookup[vals[0].strip()] = vals[1].strip()
-    return lookup
+# compile a target
+def compile(target=''):
+    return execute(cmd=['gcc', '-std=c99', target])
 
-
-# parses a c c99 file
-def parse_c(filename):
-    print("here")
-    make(target=filename + '_conv.c')
-    f = open(filename + '_conv.c', 'r')
-    text = ''
-    p = re.compile(r'(\w)*#.*')
-    for line in f:
-        line = line.strip('\n')
-        if line == '':
-            continue
-        if p.search(line):
-            continue
-        text += line + '\n'
-    f.close()
-    parser = pycparser.c_parser.CParser()
-    print("about to parse: ", filename)
-    return parser.parse(text)
-
-
-# parses a c c99 file
-def parse_c_raw(filename):
-    f = open(filename + '.c', 'r')
-    text = ''
-    p = re.compile(r'(\w)*#.*')
-    for line in f:
-        line = line.strip()
-        if line == '':
-            continue
-        if p.search(line) and 'pragma' not in line.lower():
-            continue
-        text += line + '\n'
-    f.close()
-    f = open('temp.c', 'w')
-    f.write(text)
-    f.close()
-    task = execute(cmd=['gcc', '-E', 'temp.c'], timeout=30)
-    execute(cmd=['rm', 'temp.c'])
-    text = task.stdout.decode().strip()
-    parser = pycparser.c_parser.CParser()
-    return parser.parse(text)
+# run a file
+def run_program(command):
+    return run(command, shell=True, stdout=PIPE, stderr=PIPE, cwd='.', timeout=10)
 
 
 # passed message
@@ -249,7 +171,7 @@ def report(table):
     return tabulate(table, headers=['Exercise', 'Grade', 'Message'])
 
 
-# writes autograder result
+# writes autograder result (lab)
 def write_result(grade, msg):
     write_json({'grade': grade, 'output': msg}, 'output.json')
 
@@ -262,45 +184,55 @@ def find_func(ast, name):
     return None
 
 
-class AWSTask:
+# parses a form
+def parse_form(f):
+    f = open(f, 'r', encoding='latin1')
+    p = re.compile(r'^[0-9]+( )*:[a-zA-Z0-9, ]+$')
+    lookup = {}
+    for line in f:
+        line = line.strip()
+        if p.search(line) is not None:
+            vals = line.split(':')
+            lookup[vals[0].strip()] = vals[1].strip()
+    return lookup
 
-    def __init__(self, name, instance='c5.2xlarge', AMI='ami-0e262d4de9c0b73fd', key='cc3'):
-        ec2 = boto3.resource('ec2')
-        self.instance = ec2.create_instances(
-            ImageId=AMI,
-            MaxCount=1,
-            MinCount=1,
-            InstanceType=instance,
-            SecurityGroupIds=['sg-00b6ec171be0d43f7'],
-            KeyName=key,
-            TagSpecifications=[
-                {
-                    'ResourceType': 'instance',
-                    'Tags': [
-                        {
-                            'Key': 'Name',
-                            'Value': name
-                        },
-                    ]
-                },
-            ],
-        )[0]
-        self.instance.wait_until_running()
-        self.instance.reload()
-        self.instance.wait_until_running()
-        self.key = key
-        self.ipv4 = self.instance.public_ip_address
 
-    def connect(self):
-        key = paramiko.RSAKey.from_private_key_file(self.key + '.pem')
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(hostname=self.ipv4, username='ubuntu', pkey=key)
-        self.client = client
+# parses a c c99 file
+def parse_c(filename):
+    make(target=filename + '_conv.c')
+    f = open(filename + '_conv.c', 'r')
+    text = ''
+    p = re.compile(r'(\w)*#.*')
+    for line in f:
+        line = line.strip('\n')
+        if line == '':
+            continue
+        if p.search(line):
+            continue
+        text += line + '\n'
+    f.close()
+    parser = pycparser.c_parser.CParser()
+    return parser.parse(text)
 
-    def run(self, cmd, timeout=30):
-        stdin, stdout, stderr = self.client.exec_command(cmd, timeout=timeout)
-        return (stdout.read().decode(), stderr.read().decode())
 
-    def terminate(self):
-        self.instance.terminate()
+# parses a c c99 file
+def parse_c_raw(filename):
+    f = open(filename + '.c', 'r')
+    text = ''
+    p = re.compile(r'(\w)*#.*')
+    for line in f:
+        line = line.strip()
+        if line == '':
+            continue
+        if p.search(line) and 'pragma' not in line.lower():
+            continue
+        text += line + '\n'
+    f.close()
+    f = open('temp.c', 'w')
+    f.write(text)
+    f.close()
+    task = execute(cmd=['gcc', '-E', 'temp.c'], timeout=30)
+    execute(cmd=['rm', 'temp.c'])
+    text = task.stdout.decode().strip()
+    parser = pycparser.c_parser.CParser()
+    return parser.parse(text)
